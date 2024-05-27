@@ -3,31 +3,24 @@ import { useParams } from 'react-router-dom';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import Avatar from '@mui/material/Avatar';
+import { useDispatch, useSelector } from 'react-redux';
+import { addBlog, setSavedBlogs, updateLocalStorage } from '../reducers/slice';
 
 const ShowBlog = () => {
     const { id } = useParams();
-    const [blog, setBlog] = useState(null); // blog data
-    const [isEdit, setIsEdit] = useState(false); // title editing
-    const [content, setContent] = useState(''); // editable content
+    const dispatch = useDispatch();
+    const savedBlogs = useSelector(state => state.blog.savedBlogs || []);
+    const blogIndex = savedBlogs.findIndex(blog => blog.id === parseInt(id));
+    const blog = savedBlogs[blogIndex];
+    const [isEdit, setIsEdit] = useState(false); //editing the title
+    const [content, setContent] = useState(blog?.content || ''); // editing the contetn
 
-    useEffect(() => {
-        const savedBlogs = JSON.parse(localStorage.getItem('blogs')) || [];
-        const foundBlog = savedBlogs.find(blog => blog.id === parseInt(id));
-
-        // Set the found blog and editable content to state
-        setBlog(foundBlog);
-        setContent(foundBlog?.content || ''); //intial content if found or empty 
-    }, [id]); // [id] bcz if url changes then update the blog
 
     const handleSave = () => {
-        // Update blog data in local storage with edited content *and* title
-        const savedBlogs = JSON.parse(localStorage.getItem('blogs')) || [];
-        const blogIndex = savedBlogs.findIndex(b => b.id === blog.id);
-        savedBlogs[blogIndex] = { ...savedBlogs[blogIndex], content, title: blog.title };
-        localStorage.setItem('blogs', JSON.stringify(savedBlogs));
-
-        // Set blog state with updated content and close editor
-        setBlog({ ...blog, content }); // Update blog state with the new content
+        const updatedBlogs = [...savedBlogs];
+        updatedBlogs[blogIndex] = { ...blog, content }; // Update the content of the specific blog
+        dispatch(setSavedBlogs(updatedBlogs)); // Update saved blogs in Redux store
+        dispatch(updateLocalStorage()); // Update local storage
         setIsEdit(false);
     };
 
@@ -44,7 +37,16 @@ const ShowBlog = () => {
                             <ReactQuill
                                 theme="snow"
                                 value={blog.title}
-                                onChange={(newTitle) => setBlog({ ...blog, title: newTitle })} // Update blog state with new title on change
+                                onChange={(newTitle) => {
+                                    const updatedBlogs = savedBlogs.map(blog => {
+                                        if (blog.id === parseInt(id)) {
+                                            return { ...blog, title: newTitle };
+                                        }
+                                        return blog;
+                                    });
+                                    dispatch(setSavedBlogs(updatedBlogs)); // Update saved blogs in Redux store
+                                }}
+
                                 modules={{ toolbar: true }}
                             />
                         </div>

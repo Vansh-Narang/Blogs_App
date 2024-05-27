@@ -3,32 +3,29 @@ import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { Link } from 'react-router-dom';
 import Avatar from '@mui/material/Avatar';
+import { useDispatch, useSelector } from 'react-redux';
+import { addBlog, setSavedBlogs, setError, updateLocalStorage } from '../reducers/slice'; // Import Redux actions
 
 const BlogEditor = () => {
+    const dispatch = useDispatch();
+    const blogs = useSelector(state => state.blog.savedBlogs || []);
+    const error = useSelector(state => state.blog.error);
+
     const [tag, setTag] = useState('');
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [image, setImage] = useState('');
-    const [blogs, setBlogs] = useState([]);
-    const [error, setError] = useState('');
     const [authorName, setAuthorName] = useState('');
 
     // Load blogs from local storage when the component mounts
     useEffect(() => {
-        const savedBlogs = JSON.parse(localStorage.getItem('blogs')) || [];
-        setBlogs(savedBlogs);
-    }, []);
-
-    // Update blogs in local storage whenever it changes
-    useEffect(() => {
-        if (blogs.length > 0) {
-            localStorage.setItem('blogs', JSON.stringify(blogs));
-        }
-    }, [blogs]);
+        //one time mount now no need to parse again
+        dispatch(setSavedBlogs(blogs)); // Dispatch action to load blogs from local storage
+    }, [dispatch, blogs]);
 
     const saveBlog = () => {
         if (!title || !content || !image) {
-            setError('Please fill in all fields: title, content, and image.');
+            dispatch(setError('Please fill in all fields: title, content, and image.')); // Dispatch action to set error
             return;
         }
 
@@ -41,11 +38,13 @@ const BlogEditor = () => {
             published: Date.now(),
             tag: tag,
         };
-        setBlogs([...blogs, newBlog]);
+        console.log(newBlog)
+        dispatch(addBlog(newBlog)); // Dispatch action to add blog
+        dispatch(updateLocalStorage());
+        // Clear form fields
         setTitle('');
         setContent('');
         setImage('');
-        setError('');
         setAuthorName('');
         setTag('');
     };
@@ -57,11 +56,6 @@ const BlogEditor = () => {
             setImage(reader.result);
         };
         reader.readAsDataURL(file);
-    };
-
-    const deleteBlog = (id) => {
-        const updatedBlogs = blogs.filter(blog => blog.id !== id);
-        setBlogs(updatedBlogs);
     };
 
     return (
@@ -104,16 +98,14 @@ const BlogEditor = () => {
                                     <p>{new Date(item.published).toLocaleDateString()}</p>
                                 </div>
                                 <Link to={`/showblog/${item.id}`} state={blogs} className='text-xs text-blue-500'>Read More ...</Link>
-                                <button onClick={() => deleteBlog(item.id)} className='text-xs text-red-500 mt-2 ml-10'>Delete</button>
+                                {/* <button onClick={() => deleteBlog(item.id)} className='text-xs text-red-500 mt-2 ml-10'>Delete</button> */}
                             </div>
                         </div>
-
                     ))
                 ) : (
                     <div className='text-2xl font-medium items-center'>No blogs publish one to see</div>
                 )}
             </div >
-
         </div>
     );
 };
